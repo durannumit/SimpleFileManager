@@ -3,7 +3,6 @@ package com.example.umit.simplefilemanager;
 
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.v7.app.AlertDialog;
@@ -19,6 +18,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -101,18 +101,11 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
             txt.setText(file.toString());
         } else if (file.isFile()) {
 
-            Intent intent = new Intent(Intent.ACTION_VIEW);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            String selectType = "*/*";
-            if (file.toString().endsWith("txt") || file.toString().endsWith("xml")) {
-                selectType = "text/plain";
-            } else if (file.toString().endsWith("png") || file.toString().endsWith("jpg")) {
-                selectType = "image/*";
-            } else if (file.toString().endsWith("mp4")) {
-                selectType = "video/*";
+            try {
+                FileOpen.openFile(getApplicationContext(),file);
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-            intent.setDataAndType(Uri.fromFile(file), selectType);
-            startActivity(intent);
         }
 
         Log.e(TAG, file.toString());
@@ -127,7 +120,8 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.action_refresh:
-                startActivity(new Intent(getApplicationContext(),MainActivity.class));
+                finish();
+                startActivity(getIntent());
                 return true;
 
             case R.id.action_settings:
