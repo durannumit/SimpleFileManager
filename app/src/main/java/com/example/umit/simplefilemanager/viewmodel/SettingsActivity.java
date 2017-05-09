@@ -1,4 +1,4 @@
-package com.example.umit.simplefilemanager;
+package com.example.umit.simplefilemanager.viewmodel;
 
 import android.os.Bundle;
 import android.os.Handler;
@@ -7,6 +7,8 @@ import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
 import android.view.View;
 import android.widget.TextView;
+
+import com.example.umit.simplefilemanager.R;
 
 import java.io.File;
 

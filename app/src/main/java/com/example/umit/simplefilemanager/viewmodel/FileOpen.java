@@ -1,4 +1,4 @@
-package com.example.umit.simplefilemanager;
+package com.example.umit.simplefilemanager.viewmodel;
 
 import android.content.Context;
 import android.content.Intent;
@@ -14,6 +14,7 @@ import java.io.IOException;
 public class FileOpen  {
     public static void openFile(Context context, File file) throws IOException {
         // Create URI
+
         Uri uri = Uri.fromFile(file);
 
         Intent intent = new Intent(Intent.ACTION_VIEW);
