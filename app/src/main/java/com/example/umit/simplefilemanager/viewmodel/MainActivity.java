@@ -3,6 +3,7 @@ package com.example.umit.simplefilemanager.viewmodel;
 
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.v7.app.AlertDialog;
@@ -15,12 +16,14 @@ import android.view.MenuItem;
 
 import com.example.umit.simplefilemanager.R;
 
-import org.apache.commons.lang3.StringUtils;
-
 import java.io.File;
 import java.io.IOException;
 
 import butterknife.ButterKnife;
+
+import static com.example.umit.simplefilemanager.viewmodel.Constants.APP_CONFIG_SHARED_PREF_FILE;
+import static com.example.umit.simplefilemanager.viewmodel.Constants.INITIALIZATION_PATH_SHARED_PREF;
+import static com.example.umit.simplefilemanager.viewmodel.FileExistenceValidator.ValidationResult.*;
 
 public class MainActivity extends AppCompatActivity {
     private File currentFile;
@@ -46,19 +49,23 @@ public class MainActivity extends AppCompatActivity {
         RecyclerView.LayoutManager mLayoutManager = new LinearLayoutManager(this);
         recyclerView.setLayoutManager(mLayoutManager);
         recyclerView.setAdapter(adapter);
-        this.changeCurrentDirectory(Environment.getExternalStorageDirectory().getPath());
+
+        SharedPreferences appConfig = getApplicationContext().getSharedPreferences(APP_CONFIG_SHARED_PREF_FILE, MODE_PRIVATE);
+        String initializationPath = appConfig.getString(INITIALIZATION_PATH_SHARED_PREF, Environment.getExternalStorageDirectory().getPath());
+        FileExistenceValidator.ValidationResult result = FileExistenceValidator.getInstance().validate(initializationPath);
+        this.changeCurrentDirectory(result.equals(DIRECTORY) ? initializationPath : Environment.getExternalStorageDirectory().getPath(), result);
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.action_refresh:
-                finish();
-                startActivity(getIntent());
+                this.refreshActivity();
                 return true;
 
             case R.id.action_settings:
-                startActivity(new Intent(getApplicationContext(), SettingsActivity.class));
+                Intent intent = new Intent(this, SettingsActivity.class);
+                startActivity(intent);
                 return true;
 
             default:
@@ -69,42 +76,51 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    public void refreshActivity() {
+        this.finish();
+        this.startActivity(getIntent());
+
+    }
 
     public void onBackPressed() {
         this.changeCurrentDirectory(currentFile.getParent());
     }
 
     public void changeCurrentDirectory(String path) {
-        if (StringUtils.isEmpty(path)) {
-            return;
-        }
-        File file = new File(path);
-        if (!file.exists()) {
-            return;
-        }
-        if (!file.isDirectory()) {
-            try {
-                FileOpen.openFile(getApplicationContext(), file);
-            } catch (IOException ignored) {
-            }
-            return;
-        }
-        if (!file.canRead()) {
-            AlertDialog alertbox = new AlertDialog.Builder(this)
-                    .setMessage("Do you want to exit application?")
-                    .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+        this.changeCurrentDirectory(path, FileExistenceValidator.getInstance().validate(path));
+    }
 
-                        // do something when the button is clicked
-                        public void onClick(DialogInterface arg0, int arg1) {
-                            finish();
-                        }
-                    }).setCancelable(true)
-                    .create();
-            alertbox.show();
-            return;
+
+    public void changeCurrentDirectory(String path, FileExistenceValidator.ValidationResult result) {
+        File file = null;
+        if (result.isSuccessResult()) {
+            file = new File(path);
         }
-        currentFile = file;
-        adapter.reload();
+
+        switch (result) {
+            case PERMISSION_ACCESS_ERROR:
+                AlertDialog alertbox = new AlertDialog.Builder(this)
+                        .setMessage("Do you want to exit application?")
+                        .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+
+                            // do something when the button is clicked
+                            public void onClick(DialogInterface arg0, int arg1) {
+                                finish();
+                            }
+                        }).setCancelable(true)
+                        .create();
+                alertbox.show();
+                return;
+            case FILE:
+                try {
+                    FileOpen.openFile(getApplicationContext(), file);
+                } catch (IOException ignored) {
+                }
+                return;
+            case DIRECTORY:
+                currentFile = file;
+                adapter.reload();
+        }
     }
 
     public File getCurrentFile() {

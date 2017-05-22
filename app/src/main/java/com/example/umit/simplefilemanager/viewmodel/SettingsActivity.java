@@ -1,85 +1,64 @@
 package com.example.umit.simplefilemanager.viewmodel;
 
+import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
+import android.os.Environment;
+import android.support.v4.app.NavUtils;
 import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
 import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.example.umit.simplefilemanager.R;
 
-import java.io.File;
+import static com.example.umit.simplefilemanager.viewmodel.Constants.APP_CONFIG_SHARED_PREF_FILE;
+import static com.example.umit.simplefilemanager.viewmodel.Constants.INITIALIZATION_PATH_SHARED_PREF;
 
-public class SettingsActivity extends AppCompatActivity {
+public class SettingsActivity extends AppCompatActivity implements View.OnClickListener {
 
-    static TextView myTextView; // a reference to the textview we will update.
-
-    //This is the handler - here we specify how to react to any messages.
-    static Handler handler = new Handler() {
-
-        //this code will run in the UI thread
-        @Override
-        public void handleMessage(Message msg) {
-            //get the data from the message
-            Bundle bundle = msg.getData();
-            String string = bundle.getString("myKey");
-
-            //update our textview
-            myTextView.setText(string);
-        }
-    };
-
+    public static final String EXTERNAL_PATH = Environment.getExternalStorageDirectory().getPath() + "/";
+    private EditText defaultPathEditText;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.settings_acticity);
-        //get our reference to the textview.
-        myTextView = (TextView)findViewById(R.id.myTextView);
+
+        TextView externalPathTextView = (TextView)findViewById(R.id.externalPathTextView);
+        externalPathTextView.setText(EXTERNAL_PATH);
+
+        Button setDefaultPathButton = (Button)findViewById(R.id.setDefaultPathButton);
+        setDefaultPathButton.setOnClickListener(this);
+
+        defaultPathEditText = (EditText)findViewById(R.id.defaultPathE1ditText);
+        SharedPreferences appConfig = getApplicationContext().getSharedPreferences(APP_CONFIG_SHARED_PREF_FILE, MODE_PRIVATE);
+        String initializationPath = appConfig.getString(INITIALIZATION_PATH_SHARED_PREF, "").replaceAll(EXTERNAL_PATH, "");
+        defaultPathEditText.setText(initializationPath);
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.thread_example, menu);
         return true;
     }
 
-    public void buttonClick(View view)
-    {
-        //this code will run in a background thread.
-        Runnable runnable = new Runnable() {
-            public void run() {
+    @Override
+    public void onClick(View v) {
+        String path = EXTERNAL_PATH + defaultPathEditText.getText();
+        FileExistenceValidator.ValidationResult result = FileExistenceValidator.getInstance().validate(path);
+        if (result.equals(FileExistenceValidator.ValidationResult.DIRECTORY)) {
+            SharedPreferences appConfig = getApplicationContext().getSharedPreferences(APP_CONFIG_SHARED_PREF_FILE, MODE_PRIVATE);
+            SharedPreferences.Editor edit = appConfig.edit();
+            edit.putString(INITIALIZATION_PATH_SHARED_PREF, path);
+            edit.apply();
 
-                android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
-
-                Message msg = handler.obtainMessage();
-                Bundle bundle = new Bundle();
-
-
-
-
-                /*SimpleDateFormat dateformat =
-                        new SimpleDateFormat("HH:mm:ss MM/dd/yyyy");
-                String dateString = dateformat.format(new Date());
-                //put the date string into the bundle
-                bundle.putString("myKey", dateString);
-                msg.setData(bundle);
-                //send the message - this will be sent to the handler
-                handler.sendMessage(msg);*/
-            }
-        };
-        //we want a new thread
-        Thread mythread = new Thread(runnable);
-        //lets start the thread (when the button is clicked)
-        mythread.start();
-
-        String extStore = System.getenv("EXTERNAL_STORAGE");
-        File f_exts = new File(extStore);
-
-        String secStore = System.getenv("SECONDARY_STORAGE");
-        File f_secs = new File(secStore);
+            this.finish();
+            NavUtils.navigateUpFromSameTask(this);
+        } else {
+            Toast.makeText(getApplicationContext(), "This is a not valid directory!", Toast.LENGTH_SHORT).show();
+        }
     }
 }
